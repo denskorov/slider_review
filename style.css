@@ -1,0 +1,53 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    height: 100vh;
+    width: 100vw;
+    padding: 50px;
+}
+
+.slider {
+    position: relative;
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
+    overflow-x: hidden;
+}
+
+.slide {
+    position: absolute;
+    top: 0;
+    left: 0;
+    max-width: 100%;
+    max-height: 100%;
+    width: 100%;
+    height: 100%;
+    transition: .5s;
+}
+
+.slider > .next, .slider > .prev {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    margin: auto;
+    width: 30px;
+    height: 30px;
+    background-color: rgba(0, 0, 0, 0.3);
+    padding: 6px 10px;
+    z-index: 2;
+}
+
+.slider > .next:hover, .slider > .prev:hover {
+    cursor: pointer;
+}
+
+.slider > .next {
+    right: 0;
+}
+
+.slider > .prev {
+    left: 0;
+}
