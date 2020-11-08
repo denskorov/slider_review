@@ -1,71 +1,171 @@
-const defaultOptions = {
-    sliderClass: '.slider',
-    sliderItemClass: '.slide',
-    prevButtonClass: '.prev',
-    nextButtonClass: '.next',
-    activeSlideClass: 'active',
-    auto: true,
-    delay: 1000
+const DEFAULT_OPTIONS = {
+    sliderClass: 'slider-container',
+    sliderItemClass: 'slide-item',
+    prevButtonClass: 'prev-btn',
+    nextButtonClass: 'next-btn',
+    activeSlideClass: 'slide-active',
+    beforeActiveClass: 'pre-active',
+    afterActiveClass: 'post-active',
+    autoplay: false,
+    playDelay: 1000,
+    rtl: false
 }
 
-const Slider = function () {
-    const options = Object.assign({}, defaultOptions, arguments[0])
+const EVENTS = ['before_slide', 'after_slide']
 
-    const sliders = [...document.querySelectorAll(`${options.sliderClass}>${options.sliderItemClass}`)]
-    const prevButton = document.querySelector(`${options.sliderClass}>${options.prevButtonClass}`)
-    const nextButton = document.querySelector(`${options.sliderClass}>${options.nextButtonClass}`)
-    let slideWidth = sliders[0].offsetWidth
+class Slider {
+    slider
+    slides = []
+    prevButton
+    nextButton
+    activeSlide = null
+    slideWidth = 0
 
-    let activeSlide = document.querySelector(`${options.sliderClass}>.${options.activeSlideClass}`) || document.querySelector(`${options.sliderClass}${options.sliderItemClass}`)
+    constructor(slider, options = {}) {
+        Object.assign(this, DEFAULT_OPTIONS, options)
 
-    function indexOfActiveSlide() {
-        return sliders.indexOf(activeSlide)
+        this.slider = slider
+        this.slider.classList.add(this.sliderClass)
+
+        this.initSlider()
     }
 
-    (function initSlider() {
-        setPosition(slideWidth)
-    })()
+    get slidesCount() {
+        return this.slides.length
+    }
 
-   function setPosition(slideWidth){
-       for (let i = indexOfActiveSlide(), j = 0; i < sliders.length; i++, j++) {
-           sliders[i].style.left = `${slideWidth * j}px`;
-       }
-       for (let i = indexOfActiveSlide(), j = 0; i >= 0; i--, j--) {
-           sliders[i].style.left = `${slideWidth * j}px`;
-       }
-   }
+    get indexOfActiveSlide() {
+        return [...this.slides].indexOf(this.activeSlide)
+    }
 
-    function moveTo(direct = true) {
-        const nextSlide = direct ? activeSlide.nextElementSibling : activeSlide.previousElementSibling
+    get isLast() {
+        return this.slidesCount - 1 === this.indexOfActiveSlide
+    }
 
-        if (nextSlide.classList.contains('slide')) {
-            activeSlide.classList.remove(options.activeSlideClass)
-            activeSlide = nextSlide
-            activeSlide.classList.add(options.activeSlideClass)
+    get isFirst() {
+        return this.indexOfActiveSlide === 0
+    }
+
+    get beforeActiveSlide() {
+        return this.indexOfActiveSlide - 1 >= 0 ? this.slides[this.indexOfActiveSlide - 1] : this.slides[this.slidesCount - 1]
+    }
+
+    get afterActiveSlide() {
+        return this.indexOfActiveSlide + 1 <= this.slidesCount - 1 ? this.slides[this.indexOfActiveSlide + 1] : this.slides[0]
+    }
+
+
+    initSlider() {
+        this.getSlides()
+        this.prevButton = this.slider.querySelector(`.${this.prevButtonClass}`)
+        this.nextButton = this.slider.querySelector(`.${this.nextButtonClass}`)
+
+        this.initActiveSlide()
+        this.setSlideWidth()
+        this.setPosition()
+        this.initEvents()
+        this.initAutoplay()
+    }
+
+    initActiveSlide() {
+        this.activeSlide = [...this.slides].find(s => s.classList.contains(this.activeSlideClass)) || this.slides[0]
+        this.activeSlide.classList.add(this.activeSlideClass)
+        this.beforeActiveSlide.classList.add(this.beforeActiveClass)
+        this.afterActiveSlide.classList.add(this.afterActiveClass)
+    }
+
+    setSlideWidth() {
+        this.slideWidth = this.slider.offsetWidth
+    }
+
+    getSlides() {
+        this.slides = this.slider.querySelectorAll(`.${this.sliderItemClass}`)
+    }
+
+    setPosition() {
+        for (let i = this.indexOfActiveSlide, j = 0; i < this.slidesCount; i++, j++) {
+            this.slides[i].style.left = `${this.slideWidth * j}px`;
+        }
+        for (let i = this.indexOfActiveSlide, j = 0; i >= 0; i--, j--) {
+            this.slides[i].style.left = `${this.slideWidth * j}px`;
+        }
+    }
+
+    initEvents() {
+        this.nextButton.addEventListener('click', () => {
+            this.goToNext()
+        })
+
+        this.prevButton.addEventListener('click', () => {
+            this.goToPrev()
+        })
+
+        window.addEventListener('resize', () => {
+            this.setSlideWidth()
+            this.setPosition()
+        })
+    }
+
+    goToNext() {
+        this.getSlides()
+
+        const nextSlide = this.activeSlide.nextElementSibling
+
+        if (nextSlide.classList.contains(this.sliderItemClass)) {
+            this.changeActiveSlideTo(nextSlide)
         }
 
-        setPosition(slideWidth)
+        if (this.isLast) {
+            const firstSlide = this.getCloneByIndex(0)
+            this.slides[0].remove()
+            firstSlide.style.left = `${this.slideWidth}px`
+            this.activeSlide.after(firstSlide)
+        }
+
+        this.setPosition()
     }
 
-    nextButton.addEventListener('click', () => {
-        moveTo()
-    })
+    goToPrev() {
+        this.getSlides()
 
-    prevButton.addEventListener('click', () => {
-        moveTo(false)
-    })
+        const prevSlide = this.activeSlide.previousElementSibling
 
-    if (options.auto) {
-        setInterval(
-            function () {
-                if (indexOfActiveSlide() === sliders.length - 1) {
-                    activeSlide.classList.remove(options.activeSlideClass)
-                    activeSlide = sliders[0]
-                    activeSlide.classList.add(options.activeSlideClass)
-                    setPosition(slideWidth)
-                }else {
-                    moveTo()
-                }
-            }, options.delay)
+        if (prevSlide.classList.contains(this.sliderItemClass)) {
+            this.changeActiveSlideTo(prevSlide)
+        }
+
+        if (this.isFirst) {
+            const lastSlide = this.getCloneByIndex(this.slidesCount - 1)
+            this.slides[this.slidesCount - 1].remove()
+            lastSlide.style.left = `-${this.slideWidth}px`
+            this.activeSlide.before(lastSlide)
+        }
+
+        this.setPosition()
+    }
+
+    getCloneByIndex(index) {
+        return this.slides[index].cloneNode(true)
+    }
+
+    changeActiveSlideTo(slide) {
+        this.beforeActiveSlide.classList.remove(this.beforeActiveClass)
+        this.afterActiveSlide.classList.remove(this.afterActiveClass)
+        this.activeSlide.classList.remove(this.activeSlideClass)
+        this.activeSlide = slide
+        this.activeSlide.classList.add(this.activeSlideClass)
+        this.beforeActiveSlide.classList.add(this.beforeActiveClass)
+        this.afterActiveSlide.classList.add(this.afterActiveClass)
+    }
+
+    initAutoplay() {
+        if (this.autoplay) {
+            setInterval(() => {
+                if (this.rtl)
+                    this.goToPrev()
+                else
+                    this.goToNext()
+            }, this.playDelay)
+        }
     }
 }
