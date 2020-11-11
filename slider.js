@@ -11,9 +11,7 @@ const DEFAULT_OPTIONS = {
     rtl: false
 }
 
-const EVENTS = ['before_slide', 'after_slide']
-
-class Slider {
+class Slider extends EventTarget {
     slider
     slides = []
     prevButton
@@ -21,7 +19,11 @@ class Slider {
     activeSlide = null
     slideWidth = 0
 
+    onBeforeSlide = new CustomEvent('onBeforeSlide')
+    onAfterSlide = new CustomEvent('onAfterSlide')
+
     constructor(slider, options = {}) {
+        super()
         Object.assign(this, DEFAULT_OPTIONS, options)
 
         this.slider = slider
@@ -149,6 +151,7 @@ class Slider {
     }
 
     changeActiveSlideTo(slide) {
+        this.dispatchEvent(this.onBeforeSlide)
         this.beforeActiveSlide.classList.remove(this.beforeActiveClass)
         this.afterActiveSlide.classList.remove(this.afterActiveClass)
         this.activeSlide.classList.remove(this.activeSlideClass)
@@ -156,6 +159,7 @@ class Slider {
         this.activeSlide.classList.add(this.activeSlideClass)
         this.beforeActiveSlide.classList.add(this.beforeActiveClass)
         this.afterActiveSlide.classList.add(this.afterActiveClass)
+        this.dispatchEvent(this.onAfterSlide)
     }
 
     initAutoplay() {
